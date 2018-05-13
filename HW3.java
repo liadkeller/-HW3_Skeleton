@@ -73,12 +73,6 @@ public class HW3 {
       if (mode == 3) {
         tree.printAccuracy(testSet);
       }
-    } else {
-      tree = new DecisionTreeImpl(trainSet, tuneSet);
-      // print accuracy of test
-      if(mode == 6) {
-        tree.printAccuracy(testSet);
-      }
     }
 
     // Run test

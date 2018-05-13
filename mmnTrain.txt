@@ -1,0 +1,13 @@
+%%,p,n
+##,F1,t,f
+##,F2,t,f
+##,F3,t,f
+##,F4,t,f
+##,F5,t,f
+t,t,f,f,f,p
+f,f,t,t,f,p
+t,f,f,t,f,p
+t,f,t,f,t,p
+f,t,f,f,f,n
+t,t,f,t,t,n
+f,t,t,t,t,n

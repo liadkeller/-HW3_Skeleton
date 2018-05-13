@@ -40,48 +40,72 @@ public class DecisionTreeImpl extends DecisionTree {
       this.attributeValues = train.attributeValues;
       List<Instance> instances = train.instances;
 
+      /*System.out.println("Instances: ");
+      for (Instance instance: instances) {
+    	  System.out.print(instance.label + " ");
+      }
+      System.out.println(allSame(instances));*/
+     
       boolean isTerminal = allSame(instances); // true if entropy == 0  and all of the instances have the same label
 	  if(isTerminal) {
 		  String label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
-		  DecTreeNode node = new DecTreeNode(label, null, null, isTerminal);
+		  DecTreeNode node = new DecTreeNode(label, null, null, isTerminal); // attribute = null, parentAttribute = null
 		  this.root = node;
 		  return;
 	  }
 	  
-      List<Double> gains = calculateGains(attributes, attributeValues, instances);
-      int maxIndex = maxArrayList(gains);
+	  int bestAttrIndex = mostImportantAttributeIndex(attributes, attributeValues, instances);
+	  String bestAttribute = attributes.get(bestAttrIndex);
 	  	  
-	  DecTreeNode node = new DecTreeNode(null, attributes.get(maxIndex), null, isTerminal);
+	  DecTreeNode node = new DecTreeNode(null, bestAttribute, null, isTerminal);
 	  this.root = node;
 	  
-	  List<String> values = attributeValues.get(attributes.get(maxIndex));
+	  List<String> bestAttributeValues = attributeValues.get(bestAttribute);
       	  
 	  List<String> newAttributes = new ArrayList<>(attributes);
 	  Map<String, List<String>> newAttributeValues = new HashMap<String, List<String>>(attributeValues);
 	  
-	  newAttributeValues.remove(newAttributes.get(maxIndex));
-	  newAttributes.remove(maxIndex);
+	  newAttributeValues.remove(bestAttribute);
+	  newAttributes.remove(bestAttrIndex);
 	  
-	  System.out.println(attributes.get(maxIndex) + ":");
-	  for(String value : values)
+	  //System.out.println(bestAttribute + ":");
+	  
+	  System.out.println("-> " + bestAttribute);
+	  
+	  int i = 1;
+	  for(String value : bestAttributeValues)
 	  {
-		  System.out.println(value);
-		  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, maxIndex, value), node, value);
+		  //System.out.println("FIRST " + i + " " + bestAttribute + " " + value);
+		  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, bestAttribute, value), node, value);
+		  i++;
 	  }
   }
   
-  // recursive method for building the tree one layer at a time, passes to each son the entire information of the dataset 
+  private int mostImportantAttributeIndex(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances) {
+	List<Double> gains = calculateGains(attributes, attributeValues, instances);
+    return maxArrayList(gains);
+}
+
+// recursive method for building the tree one layer at a time, passes to each son the entire information of the dataset 
   private void buildTree(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances, DecTreeNode parent, String parentValue)
   {
-	  if(attributes == null)  
+	  //System.out.println("PARENT: " + parentValue);
+	  //System.out.println("Attr: " + attributes);
+	  if(attributes == null || attributes.isEmpty())  
 		  return;
 
+	  //System.out.println("instances.isEmpty() " + instances.isEmpty());
 	  if(instances.isEmpty())
 	  {
 		  //System.out.println(parent.attribute + " " + parentValue); //TODO
 		  return;
 	  }
 	  
+	  //System.out.println("Instances: ");
+      for (Instance instance: instances) {
+    	  //System.out.print(instance.label + " ");
+      }
+      //System.out.println(allSame(instances));
 	  boolean isTerminal = allSame(instances);
 	  
 	  if(isTerminal)
@@ -91,32 +115,36 @@ public class DecisionTreeImpl extends DecisionTree {
 	      parent.addChild(node);
 		  return;
 	  }
-	      
-	  List<Double> gains = calculateGains(attributes, attributeValues, instances);
-	  int maxIndex = maxArrayList(gains);
+	  //System.out.println("Not");    
+	  int bestAttrIndex = mostImportantAttributeIndex(attributes, attributeValues, instances);
+	  String bestAttribute = attributes.get(bestAttrIndex);
+	  //System.out.println("SON: " + bestAttribute+ "  (" + attributes + ")");  
 	  
-	  //System.out.println(gains);
-
-	  //System.out.println(attributes.get(maxIndex) + " " + isTerminal);
 	  
 	  	  
-	  DecTreeNode node = new DecTreeNode(null, attributes.get(maxIndex), parentValue, isTerminal);
+	  DecTreeNode node = new DecTreeNode(null, bestAttribute, parentValue, isTerminal);
 	  parent.addChild(node);
 	  
-      List<String> values = attributeValues.get(attributes.get(maxIndex)); 
+      List<String> bestAttributeValues = attributeValues.get(bestAttribute); 
       
       List<String> newAttributes = new ArrayList<>(attributes);
 	  Map<String, List<String>> newAttributeValues = new HashMap<String, List<String>>(attributeValues);
 	  
-	  newAttributeValues.remove(newAttributes.get(maxIndex));
-	  newAttributes.remove(maxIndex);
+	  //System.out.println("Attr: " + attributes);
+	  //System.out.println("New Attr 1: " + attributes);
+	  
+	  newAttributeValues.remove(bestAttribute);
+	  newAttributes.remove(bestAttrIndex);
+	  
+	  //System.out.println("New Attr 2: " + attributes);
       
-      System.out.println(attributes.get(maxIndex) + " " + parentValue + ":   (" + attributes + ")");
+      System.out.println(parent.attribute + "-" + parentValue + " -> " + bestAttribute);
       
       
-      for(String value : values) {
-    	  System.out.println(value);
-    	  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, maxIndex, value), node, value);
+      for(String value : bestAttributeValues) {
+    	  //System.out.println("HEY " + bestAttribute + " " + value + " Attr: " + newAttributes);
+    	  //System.out.println();
+    	  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, bestAttribute, value), node, value);
       }  
   }
 
@@ -163,23 +191,22 @@ public class DecisionTreeImpl extends DecisionTree {
   @Override
   public String classify(Instance instance) {
 	DecTreeNode node = this.root;
-	System.out.println("NEW NODE" + " " + instance.attributes + " " + node.attribute);
+	//System.out.println("NEW NODE" + " " + instance.attributes + " " + node.attribute); //TODO
 	while(!node.terminal)
 	{	
-		boolean hasChanged = false; // sets true when the loop finds a child node and changes the 'node' to his child
+		boolean valueFound = false; // sets true when the loop finds the wanted value for the instance's attribute
 		for (int i = 0; i < node.children.size(); i++)
 		{
 			DecTreeNode child = node.children.get(i);
-			System.out.println(child.parentAttributeValue);
+			//System.out.println(child.parentAttributeValue);
 			if (child.parentAttributeValue.equals(instance.attributes.get(getAttributeIndex(node.attribute))))
 			{
 				node = child;
-				System.out.println(node.parentAttributeValue + " -> " +  node.attribute);
-				hasChanged = true;
+				valueFound = true;
 				break;
 			}
 		}
-		if(!hasChanged)
+		if(!valueFound)
 			return "Error";
 	}
 	return node.label;
@@ -223,9 +250,11 @@ public class DecisionTreeImpl extends DecisionTree {
   }
   
   // returns all the instances who have a constant value for a specific attribute (e.g. all instances who have a rented house) 
-  private List<Instance> attributeValueInstances(List<Instance> instances, int attributeIndex, String attributeValue)
+  private List<Instance> attributeValueInstances(List<Instance> instances, String attribute, String attributeValue)
   {
+	  int attributeIndex = getAttributeIndex(attribute);
 	  List<Instance> newInstances = new ArrayList<Instance>();
+	  
 	  for(Instance instance : instances) {
 		  if(instance.attributes.get(attributeIndex).equals(attributeValue))
 			  newInstances.add(instance);
@@ -243,8 +272,8 @@ public class DecisionTreeImpl extends DecisionTree {
 	  for(int i = 0; i < attributes.size(); i++) {
 		  List<String> values = attributeValues.get(attributes.get(i));
 		  attributeSum = 0;
-		  
-		  for(int j = 0; j < values.size(); j++) { // 2-class classification is assumed
+		  for(int j = 0; j < values.size(); j++)  // 2-class classification is assumed
+		  {
 			  goods = countGood(instances, getAttributeIndex(attributes.get(i)), values.get(j));
 			  bads = countBad(instances, getAttributeIndex(attributes.get(i)), values.get(j));
 			  attributeTotal = goods+bads;
@@ -306,26 +335,12 @@ public class DecisionTreeImpl extends DecisionTree {
     double accuracy = (double) count / test.instances.size();
     System.out.format("%.5f\n", accuracy);
   }
-    /**
-   * Build a decision tree given a training set then prune it using a tuning set.
-   * ONLY for extra credits
-   * @param train: the training set
-   * @param tune: the tuning set
-   */
-  DecisionTreeImpl(DataSet train, DataSet tune) {
-
-    this.labels = train.labels;
-    this.attributes = train.attributes;
-    this.attributeValues = train.attributeValues;
-    // only for extra credits
-  }
   
   @Override
   /**
    * Print the decision tree in the specified format
    */
   public void print() {
-
     printTreeNode(root, null, 0);
   }
 
