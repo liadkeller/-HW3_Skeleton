@@ -40,60 +40,84 @@ public class DecisionTreeImpl extends DecisionTree {
       this.attributeValues = train.attributeValues;
       List<Instance> instances = train.instances;
 
+      boolean isTerminal = allSame(instances); // true if entropy == 0  and all of the instances have the same label
+	  if(isTerminal) {
+		  String label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
+		  DecTreeNode node = new DecTreeNode(label, null, null, isTerminal);
+		  this.root = node;
+		  return;
+	  }
+	  
       List<Double> gains = calculateGains(attributes, attributeValues, instances);
       int maxIndex = maxArrayList(gains);
-	  double maxGain = gains.get(maxIndex);
-	  
-	  String label = "";
-	  boolean isTerminal = maxGain == totalEntropy(instances); // true if entropy == 0  and all of the instances have the same label
-	  if(isTerminal)
-		  label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
 	  	  
-	  DecTreeNode node = new DecTreeNode(label, attributes.get(maxIndex), null, isTerminal);
+	  DecTreeNode node = new DecTreeNode(null, attributes.get(maxIndex), null, isTerminal);
 	  this.root = node;
 	  
 	  List<String> values = attributeValues.get(attributes.get(maxIndex));
-      // TODO if isTerminal
-	  	  
+      	  
 	  List<String> newAttributes = new ArrayList<>(attributes);
 	  Map<String, List<String>> newAttributeValues = new HashMap<String, List<String>>(attributeValues);
-			  
+	  
 	  newAttributeValues.remove(newAttributes.get(maxIndex));
 	  newAttributes.remove(maxIndex);
 	  
+	  System.out.println(attributes.get(maxIndex) + ":");
 	  for(String value : values)
-		  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, maxIndex, value), label, node, value);
+	  {
+		  System.out.println(value);
+		  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, maxIndex, value), node, value);
+	  }
   }
   
   // recursive method for building the tree one layer at a time, passes to each son the entire information of the dataset 
-  private void buildTree(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances ,String label, DecTreeNode parent, String parentValue)
+  private void buildTree(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances, DecTreeNode parent, String parentValue)
   {
-	  if(attributes == null || instances.isEmpty())
+	  if(attributes == null)  
 		  return;
+
+	  if(instances.isEmpty())
+	  {
+		  //System.out.println(parent.attribute + " " + parentValue); //TODO
+		  return;
+	  }
 	  
+	  boolean isTerminal = allSame(instances);
+	  
+	  if(isTerminal)
+	  {
+		  String label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
+		  DecTreeNode node = new DecTreeNode(label, null, parentValue, isTerminal);
+	      parent.addChild(node);
+		  return;
+	  }
+	      
 	  List<Double> gains = calculateGains(attributes, attributeValues, instances);
 	  int maxIndex = maxArrayList(gains);
-	  double maxGain = gains.get(maxIndex);
+	  
+	  //System.out.println(gains);
 
-	  boolean isTerminal = maxGain == totalEntropy(instances); // true if entropy == 0  and all of the instances have the same label
-	  if(isTerminal)
-		  label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
+	  //System.out.println(attributes.get(maxIndex) + " " + isTerminal);
+	  
 	  	  
-	  DecTreeNode node = new DecTreeNode(label, attributes.get(maxIndex), parentValue, isTerminal);
-	  
-	  if(parent != null)
-    	  parent.addChild(node);
-	  
-      if(isTerminal)
-    	  return;
+	  DecTreeNode node = new DecTreeNode(null, attributes.get(maxIndex), parentValue, isTerminal);
+	  parent.addChild(node);
 	  
       List<String> values = attributeValues.get(attributes.get(maxIndex)); 
       
-      attributeValues.remove(attributes.get(maxIndex));
-      attributes.remove(maxIndex);
+      List<String> newAttributes = new ArrayList<>(attributes);
+	  Map<String, List<String>> newAttributeValues = new HashMap<String, List<String>>(attributeValues);
+	  
+	  newAttributeValues.remove(newAttributes.get(maxIndex));
+	  newAttributes.remove(maxIndex);
       
-      for(String value : values)
-		  buildTree(attributes, attributeValues, attributeValueInstances(instances, maxIndex, value), label, node, value);
+      System.out.println(attributes.get(maxIndex) + " " + parentValue + ":   (" + attributes + ")");
+      
+      
+      for(String value : values) {
+    	  System.out.println(value);
+    	  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, maxIndex, value), node, value);
+      }  
   }
 
   private int maxArrayList(List<Double> list)
@@ -122,67 +146,41 @@ public class DecisionTreeImpl extends DecisionTree {
 	  if(goods == 0 || bads == 0) return 0;
 	  return entropy(goods, bads);
   }
-
-  public void check(DataSet train) {
-	  /*TODO delete 	for(String value : attributeValues.get("A1"))
-		{
-			System.out.println("A1: " + value);
-			System.out.println();*/
-			
-			System.out.println("A1- x ; A3- n");
-			for(Instance instance: train.instances)
-	  		{	
-				if(instance.attributes.get(0).equals("x") && instance.attributes.get(2).equals("n"))
-				{
-					System.out.println(instance.attributes.get(6) + " " + instance.label);
-				}
-	  		}
-			
-			System.out.println("A1- n ; A5- n");
-			for(Instance instance: train.instances)
-	  		{
-				if(instance.attributes.get(0).equals("x") && instance.attributes.get(2).equals("n"))
-				{
-					System.out.println(instance.label);
-				}
-	  		}
-			
-			System.out.println("A1 - b ; A2- b ; A6- n ; A9 - n");
-			for(Instance instance: train.instances)
-	  		{
-				if(instance.attributes.get(0).equals("b") && instance.attributes.get(1).equals("b") && instance.attributes.get(5).equals("n") && instance.attributes.get(8).equals("n"))
-				{
-					System.out.println(instance.label);
-				}
-	  		}
-			
-			System.out.println("A1- g");
-			for(Instance instance: train.instances)
-	  		{
-				if(instance.attributes.get(0).equals("g"))
-				{
-					System.out.println(instance.attributes.get(3) + " " + instance.label);
-				}
-  			}/*
-			System.out.println();
-			System.out.println();
-		}*/
+  
+  private boolean allSame(List<Instance> instances)
+  {
+	  if(instances.isEmpty())
+		  return false;
+	  String label = instances.get(0).label;
+	  for(int i = 1; i < instances.size(); i++)
+	  {
+		  if(!instances.get(i).label.equals(label))
+			  return false;
+	  }
+	  return true;
   }
   
   @Override
   public String classify(Instance instance) {
 	DecTreeNode node = this.root;
+	System.out.println("NEW NODE" + " " + instance.attributes + " " + node.attribute);
 	while(!node.terminal)
-	{
+	{	
+		boolean hasChanged = false; // sets true when the loop finds a child node and changes the 'node' to his child
 		for (int i = 0; i < node.children.size(); i++)
 		{
 			DecTreeNode child = node.children.get(i);
+			System.out.println(child.parentAttributeValue);
 			if (child.parentAttributeValue.equals(instance.attributes.get(getAttributeIndex(node.attribute))))
 			{
 				node = child;
+				System.out.println(node.parentAttributeValue + " -> " +  node.attribute);
+				hasChanged = true;
 				break;
 			}
 		}
+		if(!hasChanged)
+			return "Error";
 	}
 	return node.label;
   }
@@ -229,9 +227,8 @@ public class DecisionTreeImpl extends DecisionTree {
   {
 	  List<Instance> newInstances = new ArrayList<Instance>();
 	  for(Instance instance : instances) {
-		  if(instance.attributes.get(attributeIndex).equals(attributeValue)) {
+		  if(instance.attributes.get(attributeIndex).equals(attributeValue))
 			  newInstances.add(instance);
-		  }
 	  }
 	  return newInstances;
   }
@@ -320,7 +317,6 @@ public class DecisionTreeImpl extends DecisionTree {
     this.labels = train.labels;
     this.attributes = train.attributes;
     this.attributeValues = train.attributeValues;
-    // TODO: add code here
     // only for extra credits
   }
   

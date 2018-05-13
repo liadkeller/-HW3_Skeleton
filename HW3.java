@@ -83,7 +83,6 @@ public class HW3 {
 
     // Run test
     if (mode == 1 || mode == 4) {
-      tree.check(trainSet);//TODO delete 
       tree.print();
     } else if(mode == 2 || mode == 5){
       for (Instance instance : testSet.instances) {

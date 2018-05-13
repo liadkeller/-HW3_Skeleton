@@ -37,7 +37,4 @@ abstract class DecisionTree {
    * 0.12345
    */
   abstract public void printAccuracy(DataSet test);
-
-  abstract public void check(DataSet train);//TODO delete 
-
 }
