@@ -40,16 +40,11 @@ public class DecisionTreeImpl extends DecisionTree {
       this.attributeValues = train.attributeValues;
       List<Instance> instances = train.instances;
 
-      /*System.out.println("Instances: ");
-      for (Instance instance: instances) {
-    	  System.out.print(instance.label + " ");
-      }
-      System.out.println(allSame(instances));*/
      
-      boolean isTerminal = allSame(instances); // true if entropy == 0  and all of the instances have the same label
-	  if(isTerminal) {
+	  if(allSame(instances)) // true if entropy == 0  and all of the instances have the same label
+	  {
 		  String label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
-		  DecTreeNode node = new DecTreeNode(label, null, null, isTerminal); // attribute = null, parentAttribute = null
+		  DecTreeNode node = new DecTreeNode(label, null, null, true); // attribute = null, parentAttribute = null, terminal = true
 		  this.root = node;
 		  return;
 	  }
@@ -57,7 +52,7 @@ public class DecisionTreeImpl extends DecisionTree {
 	  int bestAttrIndex = mostImportantAttributeIndex(attributes, attributeValues, instances);
 	  String bestAttribute = attributes.get(bestAttrIndex);
 	  	  
-	  DecTreeNode node = new DecTreeNode(null, bestAttribute, null, isTerminal);
+	  DecTreeNode node = new DecTreeNode(null, bestAttribute, null, false);
 	  this.root = node;
 	  
 	  List<String> bestAttributeValues = attributeValues.get(bestAttribute);
@@ -68,61 +63,33 @@ public class DecisionTreeImpl extends DecisionTree {
 	  newAttributeValues.remove(bestAttribute);
 	  newAttributes.remove(bestAttrIndex);
 	  
-	  //System.out.println(bestAttribute + ":");
-	  
-	  System.out.println("-> " + bestAttribute);
-	  
-	  int i = 1;
 	  for(String value : bestAttributeValues)
-	  {
-		  //System.out.println("FIRST " + i + " " + bestAttribute + " " + value);
 		  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, bestAttribute, value), node, value);
-		  i++;
-	  }
   }
   
-  private int mostImportantAttributeIndex(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances) {
-	List<Double> gains = calculateGains(attributes, attributeValues, instances);
-    return maxArrayList(gains);
-}
-
-// recursive method for building the tree one layer at a time, passes to each son the entire information of the dataset 
+  // recursive method for building the tree one layer at a time, passes to each son the entire information of the dataset 
   private void buildTree(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances, DecTreeNode parent, String parentValue)
   {
-	  //System.out.println("PARENT: " + parentValue);
-	  //System.out.println("Attr: " + attributes);
 	  if(attributes == null || attributes.isEmpty())  
-		  return;
-
-	  //System.out.println("instances.isEmpty() " + instances.isEmpty());
-	  if(instances.isEmpty())
 	  {
-		  //System.out.println(parent.attribute + " " + parentValue); //TODO
-		  return;
-	  }
-	  
-	  //System.out.println("Instances: ");
-      for (Instance instance: instances) {
-    	  //System.out.print(instance.label + " ");
-      }
-      //System.out.println(allSame(instances));
-	  boolean isTerminal = allSame(instances);
-	  
-	  if(isTerminal)
-	  {
-		  String label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
-		  DecTreeNode node = new DecTreeNode(label, null, parentValue, isTerminal);
+		  String label = majorityLabel(instances); // all instances have the same label, Hence we shall use the label of the first one
+		  DecTreeNode node = new DecTreeNode(label, null, parentValue, true);
 	      parent.addChild(node);
 		  return;
 	  }
-	  //System.out.println("Not");    
+
+	  if(allSame(instances))
+	  {
+		  String label = instances.get(0).label; // all instances have the same label, Hence we shall use the label of the first one
+		  DecTreeNode node = new DecTreeNode(label, null, parentValue, true);
+	      parent.addChild(node);
+		  return;
+	  }
+   
 	  int bestAttrIndex = mostImportantAttributeIndex(attributes, attributeValues, instances);
-	  String bestAttribute = attributes.get(bestAttrIndex);
-	  //System.out.println("SON: " + bestAttribute+ "  (" + attributes + ")");  
-	  
-	  
+	  String bestAttribute = attributes.get(bestAttrIndex);  
 	  	  
-	  DecTreeNode node = new DecTreeNode(null, bestAttribute, parentValue, isTerminal);
+	  DecTreeNode node = new DecTreeNode(null, bestAttribute, parentValue, false);
 	  parent.addChild(node);
 	  
       List<String> bestAttributeValues = attributeValues.get(bestAttribute); 
@@ -130,51 +97,31 @@ public class DecisionTreeImpl extends DecisionTree {
       List<String> newAttributes = new ArrayList<>(attributes);
 	  Map<String, List<String>> newAttributeValues = new HashMap<String, List<String>>(attributeValues);
 	  
-	  //System.out.println("Attr: " + attributes);
-	  //System.out.println("New Attr 1: " + attributes);
-	  
 	  newAttributeValues.remove(bestAttribute);
 	  newAttributes.remove(bestAttrIndex);
 	  
-	  //System.out.println("New Attr 2: " + attributes);
-      
-      System.out.println(parent.attribute + "-" + parentValue + " -> " + bestAttribute);
-      
-      
-      for(String value : bestAttributeValues) {
-    	  //System.out.println("HEY " + bestAttribute + " " + value + " Attr: " + newAttributes);
-    	  //System.out.println();
+      for(String value : bestAttributeValues)
     	  buildTree(newAttributes, newAttributeValues, attributeValueInstances(instances, bestAttribute, value), node, value);
-      }  
   }
 
-  private int maxArrayList(List<Double> list)
-  {
-	  int maxIndex = 0;
-	  double maxVal = 0;
-	  for(int i = 0; i < list.size(); i++)
-	  {
-		  if(list.get(i) > maxVal)
-		  {
-			  maxIndex = i;
-			  maxVal = list.get(i);
-		  }
-	  }
-	  return maxIndex;
-  }
-  
-  // calculates the entropy for all the attributes together (good instances to bad instances)
-  private double totalEntropy(List<Instance> instances)
-  {
+  private String majorityLabel(List<Instance> instances) {
 	  int goods = 0, bads = 0;
-	  for(Instance instance : instances) {
-		  if(instance.label.equals(labels.get(0))) { goods++; }
-		  else { bads++; }
+	  for(Instance instance : instances)
+	  {    
+	      if(instance.label.equals(labels.get(0)))
+		      goods++;
+	      
+	      else if(instance.label.equals(labels.get(1)))
+		      bads++;		  
 	  }
-	  if(goods == 0 || bads == 0) return 0;
-	  return entropy(goods, bads);
+	  
+	  if(goods >= bads)
+		  return labels.get(0);
+	  
+	  else
+		  return labels.get(1);
   }
-  
+
   private boolean allSame(List<Instance> instances)
   {
 	  if(instances.isEmpty())
@@ -187,41 +134,76 @@ public class DecisionTreeImpl extends DecisionTree {
 	  }
 	  return true;
   }
-  
-  @Override
-  public String classify(Instance instance) {
-	DecTreeNode node = this.root;
-	//System.out.println("NEW NODE" + " " + instance.attributes + " " + node.attribute); //TODO
-	while(!node.terminal)
-	{	
-		boolean valueFound = false; // sets true when the loop finds the wanted value for the instance's attribute
-		for (int i = 0; i < node.children.size(); i++)
-		{
-			DecTreeNode child = node.children.get(i);
-			//System.out.println(child.parentAttributeValue);
-			if (child.parentAttributeValue.equals(instance.attributes.get(getAttributeIndex(node.attribute))))
-			{
-				node = child;
-				valueFound = true;
-				break;
-			}
-		}
-		if(!valueFound)
-			return "Error";
-	}
-	return node.label;
+
+private String maxDoubleMap(Map<String, Double> dMap)
+  {
+	  Map.Entry<String, Double> maxEntry = null;
+	  for (Map.Entry<String, Double> entry : dMap.entrySet()) {
+	    if (maxEntry == null || entry.getValue() > maxEntry.getValue()) {
+	      maxEntry = entry;
+	    }
+	  }
+
+	  return maxEntry.getKey();
   }
 
-  //private method for inner calculation
+//private method for inner calculation
+  private double lg2(double x) {
+	  return Math.log(x)/Math.log(2);  
+  }
+
+//private method for inner calculation
   private double entropy(int p, int n)
   {
 	  double q = (double)(p)/(p+n);
 	  return -(q*lg2(q) + (1-q)*lg2(1-q));
   }
-  
-  //private method for inner calculation
-  private double lg2(double x) {
-	  return Math.log(x)/Math.log(2);  
+
+private int mostImportantAttributeIndex(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances) {
+	Map<String, Double> gains = calculateGains(attributes, attributeValues, instances);
+    String mostImportantAttribute = maxDoubleMap(gains);
+    
+    for (int i = 0; i < attributes.size(); i++) {
+        if (mostImportantAttribute.equals(attributes.get(i))) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// return a list of integers containing the info gain of each attribute respectively
+  private Map<String, Double> calculateGains(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances)
+  {
+	  int goods,bads,attributeTotal;
+	  double attributeSum;
+	  Map<String, Double> gains = new HashMap<String, Double>();
+	  for(int i = 0; i < attributes.size(); i++) {
+		  List<String> values = attributeValues.get(attributes.get(i));
+		  attributeSum = 0;
+		  for(int j = 0; j < values.size(); j++)  // 2-class classification is assumed
+		  {
+			  goods = countGood(instances, getAttributeIndex(attributes.get(i)), values.get(j));
+			  bads = countBad(instances, getAttributeIndex(attributes.get(i)), values.get(j));
+			  attributeTotal = goods+bads;
+			  
+			  if(goods != 0 && bads != 0)
+				  attributeSum += ((double)attributeTotal/instances.size())*entropy(goods, bads); // the sum of entropies for the specific attribute
+		  }
+		  gains.put(attributes.get(i), (totalEntropy(instances) - attributeSum));
+	  }
+	  return gains;
+  }
+
+// calculates the entropy for all the attributes together (good instances to bad instances)
+  private double totalEntropy(List<Instance> instances)
+  {
+	  int goods = 0, bads = 0;
+	  for(Instance instance : instances) {
+		  if(instance.label.equals(labels.get(0))) { goods++; }
+		  else { bads++; }
+	  }
+	  if(goods == 0 || bads == 0) return 0;
+	  return entropy(goods, bads);
   }
   
   // We shall consider the fact that 2-class (only!) classification is assumed when using this method
@@ -262,65 +244,39 @@ public class DecisionTreeImpl extends DecisionTree {
 	  return newInstances;
   }
   
-  // return a list of integers containing the info gain of each attribute respectively
-  private List<Double> calculateGains(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances)
-  {
-	  int goods,bads,attributeTotal;
-	  double attributeSum;
-	  List<Double> gains = new ArrayList<Double>();
-	  //List<Integer> errors = new ArrayList<Integer>(); TODO
-	  for(int i = 0; i < attributes.size(); i++) {
-		  List<String> values = attributeValues.get(attributes.get(i));
-		  attributeSum = 0;
-		  for(int j = 0; j < values.size(); j++)  // 2-class classification is assumed
-		  {
-			  goods = countGood(instances, getAttributeIndex(attributes.get(i)), values.get(j));
-			  bads = countBad(instances, getAttributeIndex(attributes.get(i)), values.get(j));
-			  attributeTotal = goods+bads;
-			  
-			  if(goods != 0 && bads != 0)
-				  attributeSum += ((double)attributeTotal/instances.size())*entropy(goods, bads); // the sum of entropies for the specific attribute
-		  }
-		  gains.add(totalEntropy(instances) - attributeSum);
-	  }
-	  
-	  /* 
-	      /*
-		  if(attributeSum == 0) {
-			  errors.add(i);
-			  System.out.println("NO ENTROPY " + attributes.get(i));
-		  }
-		  
-		  
-	   
-	  for(int i = 0; i < errors.size(); i++) {  TODO
-		  System.out.println(attributes.get(errors.get(i)));
-		  for(int j = 0; j < attributeValues.get(attributes.get(errors.get(i))).size(); j++) {
-			  int good = countGood(instances, i, attributeValues.get(attributes.get(errors.get(i))).get(j));
-			  System.out.println(attributeValues.get(attributes.get(errors.get(i))).get(j) + " " + good);
-		  }
-		  
-		  for(Instance instance : instances)
-		  {
-			  //System.out.println("GOODSTART");
-			  if(instance.label.equals(labels.get(0)))
-		         System.out.println(attributes.get(errors.get(i)) + " " + errors.get(i) + " " + instance.attributes.get(errors.get(i)) + " " + attributeValues.get(attributes.get(errors.get(i))) + " GOOD");
-			     System.out.println(attributes);
-			  //System.out.println("GOODEND");
-		  }
-      }*/
-	  return gains;
-  }
-  
   @Override
+  public String classify(Instance instance) {
+	DecTreeNode node = this.root;
+	
+	while(!node.terminal)
+	{	
+		boolean valueFound = false; // sets true when the loop finds the wanted value for the instance's attribute
+		for (int i = 0; i < node.children.size(); i++)
+		{
+			DecTreeNode child = node.children.get(i);
+			
+			if (child.parentAttributeValue.equals(instance.attributes.get(getAttributeIndex(node.attribute))))
+			{
+				node = child;
+				valueFound = true;
+				break;
+			}
+		}
+		if(!valueFound)
+			return "Error";
+	}
+	return node.label;
+  }
+
+@Override
   public void rootInfoGain(DataSet train) {
     this.labels = train.labels;
     this.attributes = train.attributes;
     this.attributeValues = train.attributeValues;
     List<Instance> instances = train.instances;
-	List<Double> gains = calculateGains(attributes, attributeValues, instances);
+    Map<String, Double> gains = calculateGains(attributes, attributeValues, instances);
 	for(int i = 0; i < gains.size(); i++) {
-		System.out.format("%s %.5f\n", attributes.get(i), gains.get(i));
+		System.out.format("%s %.5f\n", attributes.get(i), gains.get(attributes.get(i)));
 	} 
   }
   
@@ -332,6 +288,7 @@ public class DecisionTreeImpl extends DecisionTree {
     	if(this.classify(instance).equals(instance.label))
     		count++;
     }
+    
     double accuracy = (double) count / test.instances.size();
     System.out.format("%.5f\n", accuracy);
   }

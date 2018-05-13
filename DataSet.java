@@ -49,7 +49,7 @@ public class DataSet {
   public void addAttribute(String line) {
     if (attributes == null) {
       attributes = new ArrayList<String>();
-      attributeValues = new HashMap<String, List<String>>();
+      attributeValues = new HashMap<String, List<String>>(); //TODO
     }
 
     String[] splitline = line.split(DELIMITER);
@@ -81,7 +81,7 @@ public class DataSet {
     }
 
     String[] splitline = line.split(DELIMITER);
-    if (splitline.length < 1 + attributes.size()) { // TODO don't call .size()?
+    if (splitline.length < 1 + attributes.size()) {
       System.err.println("Instance doesn't contain enough attributes");
       return;
     }
