@@ -105,16 +105,16 @@ public class DecisionTreeImpl extends DecisionTree {
 
   private String majorityLabel(List<Instance> instances) {
 	  //builds an array with the labels counts
-	  List<Integer> labelCounts = new ArrayList<Integer>(labels.size());
+	  List<Integer> labelsCounts = new ArrayList<Integer>(labels.size());
 	  
 	  for(int i = 0; i < labels.size(); i++)
-		  labelCounts.add(0);
+		  labelsCounts.add(0);
 	  	  
 	  for(Instance instance : instances)
 	  {
 		  int labelIndex = getLabelIndex(instance.label); // increments the labelCount in 1 according to the label of the instance
-		  int k = labelCounts.get(labelIndex);
-		  labelCounts.set(labelIndex, k+1);  
+		  int k = labelsCounts.get(labelIndex);
+		  labelsCounts.set(labelIndex, k+1);  
 	  }
 	  
 	  //find the maximum of the array
@@ -123,10 +123,10 @@ public class DecisionTreeImpl extends DecisionTree {
 	  
 	  for(int i = 0; i < labels.size(); i++)
 	  {
-		  if(labelCounts.get(i) > maxValue)
+		  if(labelsCounts.get(i) > maxValue)
 		  {
 			  maxIndex = i;
-			  maxValue = labelCounts.get(maxIndex);
+			  maxValue = labelsCounts.get(maxIndex);
 		  }
 	  }
 	  
@@ -147,6 +147,7 @@ public class DecisionTreeImpl extends DecisionTree {
 	  return true;
   }
 
+//private method for inner calculation
 private String maxDoubleMap(Map<String, Double> dMap)
   {
 	  Map.Entry<String, Double> maxEntry = null;
@@ -164,18 +165,17 @@ private String maxDoubleMap(Map<String, Double> dMap)
 	  return Math.log(x)/Math.log(2);  
   }
 
-
+//private method for inner calculation
 private int sumArray(List<Integer> arr) {
 	int sum = 0;
 	for(int i = 0; i < arr.size(); i++)
-	{
 		sum += arr.get(i);
-	}
+
 	return sum;
 }
 
-//private method for inner calculation
-  private double entropy(List<Integer> arr)
+//private method for entropy calculation
+  private double calcEntropy(List<Integer> arr)
   {
 	  int total = sumArray(arr);
 	  if(total == 0)
@@ -209,58 +209,40 @@ private int mostImportantAttributeIndex(List<String> attributes, Map<String, Lis
   {
 	  double attributeSum;
 	  Map<String, Double> gains = new HashMap<String, Double>();
-	  for(int i = 0; i < attributes.size(); i++) {
+	  
+	  for(int i = 0; i < attributes.size(); i++)
+	  {
 		  List<String> values = attributeValues.get(attributes.get(i));
+		  
 		  attributeSum = 0;
 		  for(int j = 0; j < values.size(); j++)
 		  {
-			  List<Integer> labelCounts = new ArrayList<Integer>(labels.size());
-			  int attributeTotal = 0;
-			  for(int k = 0; k < labels.size(); k++)
-			  {
-				  int countClass = countAtrribiuteValClass(instances, getAttributeIndex(attributes.get(i)), values.get(j), k);
-				  labelCounts.add(countClass);
-				  attributeTotal += countClass;
-			  }
-			  
-			  attributeSum += ((double)attributeTotal/instances.size())*entropy(labelCounts); // the sum of entropies for the specific attribute
+			  List<Instance> attributeValueInstances = attributeValueInstances(instances, attributes.get(i), attributeValues.get(attributes.get(i)).get(j));
+			  attributeSum += ((double) attributeValueInstances.size() / instances.size()) * entropy(attributeValueInstances); // the sum of entropies for the specific attribute
 		  }
 		  
-		  gains.put(attributes.get(i), (totalEntropy(instances) - attributeSum));
+		  gains.put(attributes.get(i), (entropy(instances) - attributeSum));
 	  }
 	  return gains;
   }
 
 // calculates the entropy for all the attributes together (good instances to bad instances)
-  private double totalEntropy(List<Instance> instances)
+  private double entropy(List<Instance> instances)
   {
-	  List<Integer> labelCounts = new ArrayList<Integer>(labels.size());
+	  List<Integer> labelsCounts = new ArrayList<Integer>(labels.size());
 	  for(int i = 0; i < labels.size(); i++)
-		  labelCounts.add(0);
+		  labelsCounts.add(0);
 	  
 	  for(Instance instance : instances)
 	  {
 		  int labelIndex = getLabelIndex(instance.label); // increments the labelCount in 1 according to the label of the instance
-		  int k = labelCounts.get(labelIndex);
-		  labelCounts.set(labelIndex, k+1);  
+		  int k = labelsCounts.get(labelIndex);
+		  labelsCounts.set(labelIndex, k+1);  
 	  }
 	  
-	  return entropy(labelCounts);
+	  return calcEntropy(labelsCounts);
   }
-  
-  
-  private int countAtrribiuteValClass(List<Instance> instances, int attributeIndex, String attributeValue, int classIndex)
-  {
-	  int count = 0;
-	  for(Instance instance : instances) {  
-		  if(instance.attributes.get(attributeIndex).equals(attributeValue)) {		  
-			  if(instance.label.equals(labels.get(classIndex)))
-				  count++;
-		  }
-	  }
-	  return count;
-  }
-  
+
   // returns all the instances who have a constant value for a specific attribute (e.g. all instances who have a rented house) 
   private List<Instance> attributeValueInstances(List<Instance> instances, String attribute, String attributeValue)
   {
