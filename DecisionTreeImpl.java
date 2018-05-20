@@ -25,7 +25,6 @@ public class DecisionTreeImpl extends DecisionTree {
    * Answers static questions about decision trees.
    */
   DecisionTreeImpl() {
-    // no code necessary this is void purposefully
   }
 
   /**
@@ -69,10 +68,10 @@ public class DecisionTreeImpl extends DecisionTree {
   
   // recursive method for building the tree one layer at a time, passes to each son the entire information of the dataset 
   private void buildTree(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances, DecTreeNode parent, String parentValue)
-  {
+  {	  
 	  if(attributes == null || attributes.isEmpty())  
 	  {
-		  String label = majorityLabel(instances); // all instances have the same label, Hence we shall use the label of the first one
+		  String label = majorityLabel(instances);
 		  DecTreeNode node = new DecTreeNode(label, null, parentValue, true);
 	      parent.addChild(node);
 		  return;
@@ -88,7 +87,7 @@ public class DecisionTreeImpl extends DecisionTree {
    
 	  int bestAttrIndex = mostImportantAttributeIndex(attributes, attributeValues, instances);
 	  String bestAttribute = attributes.get(bestAttrIndex);  
-	  	  
+
 	  DecTreeNode node = new DecTreeNode(null, bestAttribute, parentValue, false);
 	  parent.addChild(node);
 	  
@@ -105,21 +104,34 @@ public class DecisionTreeImpl extends DecisionTree {
   }
 
   private String majorityLabel(List<Instance> instances) {
-	  int goods = 0, bads = 0;
+	  //builds an array with the labels counts
+	  List<Integer> labelCounts = new ArrayList<Integer>(labels.size());
+	  
+	  for(int i = 0; i < labels.size(); i++)
+		  labelCounts.add(0);
+	  	  
 	  for(Instance instance : instances)
-	  {    
-	      if(instance.label.equals(labels.get(0)))
-		      goods++;
-	      
-	      else if(instance.label.equals(labels.get(1)))
-		      bads++;		  
+	  {
+		  int labelIndex = getLabelIndex(instance.label); // increments the labelCount in 1 according to the label of the instance
+		  int k = labelCounts.get(labelIndex);
+		  labelCounts.set(labelIndex, k+1);  
 	  }
 	  
-	  if(goods >= bads)
-		  return labels.get(0);
+	  //find the maximum of the array
+	  int maxIndex = 0;
+	  int maxValue = 0;
 	  
-	  else
-		  return labels.get(1);
+	  for(int i = 0; i < labels.size(); i++)
+	  {
+		  if(labelCounts.get(i) > maxValue)
+		  {
+			  maxIndex = i;
+			  maxValue = labelCounts.get(maxIndex);
+		  }
+	  }
+	  
+	  //returns the label that had the largest number of instances.
+	  return labels.get(maxIndex);
   }
 
   private boolean allSame(List<Instance> instances)
@@ -152,21 +164,42 @@ private String maxDoubleMap(Map<String, Double> dMap)
 	  return Math.log(x)/Math.log(2);  
   }
 
+
+private int sumArray(List<Integer> arr) {
+	int sum = 0;
+	for(int i = 0; i < arr.size(); i++)
+	{
+		sum += arr.get(i);
+	}
+	return sum;
+}
+
 //private method for inner calculation
-  private double entropy(int p, int n)
+  private double entropy(List<Integer> arr)
   {
-	  double q = (double)(p)/(p+n);
-	  return -(q*lg2(q) + (1-q)*lg2(1-q));
+	  int total = sumArray(arr);
+	  if(total == 0)
+		  return 0;
+	  
+	  double sum = 0;
+	  for(int i = 0; i < arr.size(); i++)
+	  {
+		  double q = (double) arr.get(i) / total;
+		  if(q != 0)
+			  sum += q*lg2(q);
+	  }
+	  
+	  return -sum;
   }
 
 private int mostImportantAttributeIndex(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances) {
 	Map<String, Double> gains = calculateGains(attributes, attributeValues, instances);
-    String mostImportantAttribute = maxDoubleMap(gains);
-    
-    for (int i = 0; i < attributes.size(); i++) {
-        if (mostImportantAttribute.equals(attributes.get(i))) {
+	
+	String mostImportantAttribute = maxDoubleMap(gains);
+    for (int i = 0; i < attributes.size(); i++)
+    {
+        if (mostImportantAttribute.equals(attributes.get(i)))
             return i;
-        }
     }
     return -1;
 }
@@ -174,21 +207,25 @@ private int mostImportantAttributeIndex(List<String> attributes, Map<String, Lis
 // return a list of integers containing the info gain of each attribute respectively
   private Map<String, Double> calculateGains(List<String> attributes, Map<String, List<String>> attributeValues, List<Instance> instances)
   {
-	  int goods,bads,attributeTotal;
 	  double attributeSum;
 	  Map<String, Double> gains = new HashMap<String, Double>();
 	  for(int i = 0; i < attributes.size(); i++) {
 		  List<String> values = attributeValues.get(attributes.get(i));
 		  attributeSum = 0;
-		  for(int j = 0; j < values.size(); j++)  // 2-class classification is assumed
+		  for(int j = 0; j < values.size(); j++)
 		  {
-			  goods = countGood(instances, getAttributeIndex(attributes.get(i)), values.get(j));
-			  bads = countBad(instances, getAttributeIndex(attributes.get(i)), values.get(j));
-			  attributeTotal = goods+bads;
+			  List<Integer> labelCounts = new ArrayList<Integer>(labels.size());
+			  int attributeTotal = 0;
+			  for(int k = 0; k < labels.size(); k++)
+			  {
+				  int countClass = countAtrribiuteValClass(instances, getAttributeIndex(attributes.get(i)), values.get(j), k);
+				  labelCounts.add(countClass);
+				  attributeTotal += countClass;
+			  }
 			  
-			  if(goods != 0 && bads != 0)
-				  attributeSum += ((double)attributeTotal/instances.size())*entropy(goods, bads); // the sum of entropies for the specific attribute
+			  attributeSum += ((double)attributeTotal/instances.size())*entropy(labelCounts); // the sum of entropies for the specific attribute
 		  }
+		  
 		  gains.put(attributes.get(i), (totalEntropy(instances) - attributeSum));
 	  }
 	  return gains;
@@ -197,34 +234,27 @@ private int mostImportantAttributeIndex(List<String> attributes, Map<String, Lis
 // calculates the entropy for all the attributes together (good instances to bad instances)
   private double totalEntropy(List<Instance> instances)
   {
-	  int goods = 0, bads = 0;
-	  for(Instance instance : instances) {
-		  if(instance.label.equals(labels.get(0))) { goods++; }
-		  else { bads++; }
+	  List<Integer> labelCounts = new ArrayList<Integer>(labels.size());
+	  for(int i = 0; i < labels.size(); i++)
+		  labelCounts.add(0);
+	  
+	  for(Instance instance : instances)
+	  {
+		  int labelIndex = getLabelIndex(instance.label); // increments the labelCount in 1 according to the label of the instance
+		  int k = labelCounts.get(labelIndex);
+		  labelCounts.set(labelIndex, k+1);  
 	  }
-	  if(goods == 0 || bads == 0) return 0;
-	  return entropy(goods, bads);
+	  
+	  return entropy(labelCounts);
   }
   
-  // We shall consider the fact that 2-class (only!) classification is assumed when using this method
-  private int countGood(List<Instance> instances, int attributeIndex, String attributeValue)
+  
+  private int countAtrribiuteValClass(List<Instance> instances, int attributeIndex, String attributeValue, int classIndex)
   {
 	  int count = 0;
 	  for(Instance instance : instances) {  
 		  if(instance.attributes.get(attributeIndex).equals(attributeValue)) {		  
-			  if(instance.label.equals(labels.get(0)))
-				  count++;
-		  }
-	  }
-	  return count;
-  }
-  
-  //We shall consider the fact that 2-class (only!) classification is assumed when using this method
-  private int countBad(List<Instance> instances, int attributeIndex, String attributeValue) {
-	  int count = 0;
-	  for(Instance instance : instances) {
-		  if(instance.attributes.get(attributeIndex).equals(attributeValue)) {
-			  if(instance.label.equals(labels.get(1)))
+			  if(instance.label.equals(labels.get(classIndex)))
 				  count++;
 		  }
 	  }
